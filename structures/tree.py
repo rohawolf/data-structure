@@ -22,30 +22,36 @@ import typing
     width: the value of level which has maximum node count
 """
 
+
 class Node(Object):
-        parent = None
-        siblings = []
-        children = []
+    parent = None
+    siblings = []
+    children = []
 
-        def __init__(self, value: typing.Any, parent: typing.Optional[Node], siblings: typing.List[Node], children: typing.List[Node]) -> None:
-            if isinstance(value, int):
-                self.value = value
-            else:
-                self.value = id(value)
-            self.parent = parent
-            self.siblings = siblings
-            self.children = children
+    def __init__(
+        self,
+        value: typing.Any,
+        parent: typing.Optional[Node],
+        siblings: typing.List[Node],
+        children: typing.List[Node],
+    ) -> None:
 
-        @property
-        def has_parent(self) -> bool:
-            return self.parent is not None
+        self.value = value if isinstance(value, int) else id(value)
+        self.parent = parent
+        self.siblings = siblings
+        self.children = children
 
-        @property
-        def has_child(self) -> bool:
-            return len(self.children) != 0
+    @property
+    def has_parent(self) -> bool:
+        return self.parent is not None
+
+    @property
+    def has_child(self) -> bool:
+        return len(self.children) != 0
 
 
 class Tree(Object):
+    MAXIMUM_CHILD_NODE_COUNT = None
 
     def __init__(self, elements: typing.Iterable) -> None:
         self.elements = elements
@@ -54,4 +60,12 @@ class Tree(Object):
     def build(self):
         pass
 
-    
+
+class BinaryTree(Tree):
+    MAXIMUM_CHILD_NODE_COUNT = 2
+
+    def __init__(self, elements: typing.Iterable) -> None:
+        super(BinaryTree, self).__init__(self, elements)
+
+    def build(self):
+        pass
