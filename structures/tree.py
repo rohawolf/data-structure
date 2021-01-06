@@ -23,49 +23,91 @@ import typing
 """
 
 
-class Node(Object):
-    parent = None
-    siblings = []
-    children = []
-
+class Node:
     def __init__(
         self,
+        key: int,
         value: typing.Any,
-        parent: typing.Optional[Node],
-        siblings: typing.List[Node],
-        children: typing.List[Node],
+        left: Node,
+        right: Node,
+        parent: Node = None,
     ) -> None:
 
-        self.value = value if isinstance(value, int) else id(value)
-        self.parent = parent
-        self.siblings = siblings
-        self.children = children
+        self.key = key
+        self.value = value
+        self.left = left
+        self.right = right
 
-    @property
-    def has_parent(self) -> bool:
-        return self.parent is not None
+        self.parent = None
 
-    @property
-    def has_child(self) -> bool:
-        return len(self.children) != 0
+    def __repr__(self):
+        return f"<Node key:{self.key}, value:{self.value}, parent:{self.parent}, left:{self.left}, right:{self.right}>"
 
 
-class Tree(Object):
-    MAXIMUM_CHILD_NODE_COUNT = None
 
+
+class BinaryTree:
     def __init__(self, elements: typing.Iterable) -> None:
-        self.elements = elements
-        self.build()
+        self.root = None
+        for value, key in enumerate(elements):
+            self.root = self.insert(key, value, self.root)
 
-    def build(self):
-        pass
+    def search(
+        self, key: int, node: Node = None, allow_duplicate: bool = False
+    ) -> Node:
+        _node = node or self.root
+        while _node is not None:
+            if not allow_duplicate and key == _node.key:
+                return _node
+
+            _node = _node.left if key < _node.key else _node.right
+        return _node
+
+    def insert(self, key: int, value: typing.Any, node: Node = None) -> Node:
+        if node is None:
+            return Node(key, value, None, None, None)
+
+        if key == node.key:
+            return Node(key, value, node.left, node.right, node.parent)
+
+        if key < node.key:
+            return Node(
+                node.key,
+                node.value,
+                self.insert(key, value, node.left),
+                node.right,
+                node.parent,
+            )
+
+        return Node(
+            node.key,
+            node.value,
+            node.left,
+            self.insert(key, value, node.right),
+            node.parent,
+        )
+
+    def minimum(self, node: Node):
+        _node = node
+        while _node.left is not None:
+            _node = _node.left
+        return _node
+
+    def replace(self, node: Node, another: Node):
+        if node.parent:
+            if node == node.parent.left:
+                node.parent.left = another
+            else:
+                node.parent.right = another
+        if another is not None:
+            another.parent = node.parent
 
 
-class BinaryTree(Tree):
-    MAXIMUM_CHILD_NODE_COUNT = 2
+if __name__ == "__main__":
 
-    def __init__(self, elements: typing.Iterable) -> None:
-        super(BinaryTree, self).__init__(self, elements)
+    from random import shuffle
 
-    def build(self):
-        pass
+    el = list(range(150))
+    shuffle(el)
+    bt = BinaryTree(el)
+    print(bt.search(10))
