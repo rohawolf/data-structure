@@ -23,91 +23,165 @@ import typing
 """
 
 
-class Node:
-    def __init__(
-        self,
-        key: int,
-        value: typing.Any,
-        left: Node,
-        right: Node,
-        parent: Node = None,
-    ) -> None:
-
+class TreeNode:
+    def __init__(self, key, value, left = None, right = None, parent = None):
         self.key = key
         self.value = value
         self.left = left
         self.right = right
+        self.parent = parent
 
-        self.parent = None
 
     def __repr__(self):
-        return f"<Node key:{self.key}, value:{self.value}, parent:{self.parent}, left:{self.left}, right:{self.right}>"
+        return f'< {self.left or "*"} <-- {self.key}:{self.value} --> {self.right or "*"} >'
 
+
+    def min(self):
+        _current = self
+        while _current.left:
+            _current = _current.left
+        return _current
+
+    
+    def replace(self, other):
+        if self.parent:
+            if self == self.parent.left:
+                self.parent.left = other
+            else:
+                self.parent.right = other
+
+        if other:
+            other.parent = self.parent
+
+
+    def insert(self, key, value):
+        _current = self
+        while True:
+            if key == self.key:
+                return
+            
+            if key < _current.key:
+                if _current.left is None:
+                    _current.left = TreeNode(key, value, parent=_current)
+                    return
+                _current = _current.left
+            else:
+                if _current.right is None:
+                    _current.right = TreeNode(key, value, parent=_current)
+                    return
+                _current = _current.right
+        
+
+    def search(self, key=None):
+        _current = self
+        while _current is not None:
+            if key is None:
+                return None
+            if key == _current.key:
+                break
+            _current = _current.left if key < _current.key else _current.right
+        return _current
+
+
+    def delete(self, key):
+        if key < self.key:
+            self.left.delete(key)
+            return
+
+        if key > self.key:
+            self.right.delete(key)
+            return
+
+        if self.left and self.right:
+            successor = self.right.min()
+            self.key = successor.key
+            successor.delete(successor.key)
+
+        elif self.left:
+            self.replace(self.left)
+
+        elif self.right:
+            self.replace(self.right)
+
+        else:
+            self.replace(None)
+
+
+    def is_parent(self, _node):
+        return _node is not None and _node.parent == self
+
+
+    def is_left(self, _parent):
+        return self.parent and self.parent.left == self
+
+
+    def is_right(self, _parent):
+        return self.parent and self.parent.right == self
+
+
+    def traverse(self, key_from=0, callback=lambda v: print(v), _type='in-order'):
+        if _type not in ['in-order', 'pre-order', 'post-order']:
+            return
+
+        _node = self.search(key_from)
+        if _node is None:
+            return
+
+        if _type == 'in-order':
+            if _node.left:
+                self.traverse(_node.left.key, callback)
+            callback(_node.value)
+            if _node.right:
+                self.traverse(_node.right.key, callback)
+
+        elif _type == 'pre-order':
+            callback(_node.value)
+            if _node.left:
+                self.traverse(_node.left.key, callback)
+            if _node.right:
+                self.traverse(_node.right.key, callback)
+
+        else:
+            if _node.left:
+                self.traverse(_node.left.key, callback)
+            if _node.right:
+                self.traverse(_node.right.key, callback)                
+            callback(_node.value)
 
 
 
 class BinaryTree:
-    def __init__(self, elements: typing.Iterable) -> None:
+    def __init__(self, values):
         self.root = None
-        for value, key in enumerate(elements):
-            self.root = self.insert(key, value, self.root)
 
-    def search(
-        self, key: int, node: Node = None, allow_duplicate: bool = False
-    ) -> Node:
-        _node = node or self.root
-        while _node is not None:
-            if not allow_duplicate and key == _node.key:
-                return _node
+        if any([isinstance(values, _type) for _type in [list, set, frozenset]]):
+            _iter = enumerate(values)
+        elif isinstance(values, dict):
+            _iter = values.items()
 
-            _node = _node.left if key < _node.key else _node.right
-        return _node
-
-    def insert(self, key: int, value: typing.Any, node: Node = None) -> Node:
-        if node is None:
-            return Node(key, value, None, None, None)
-
-        if key == node.key:
-            return Node(key, value, node.left, node.right, node.parent)
-
-        if key < node.key:
-            return Node(
-                node.key,
-                node.value,
-                self.insert(key, value, node.left),
-                node.right,
-                node.parent,
-            )
-
-        return Node(
-            node.key,
-            node.value,
-            node.left,
-            self.insert(key, value, node.right),
-            node.parent,
-        )
-
-    def minimum(self, node: Node):
-        _node = node
-        while _node.left is not None:
-            _node = _node.left
-        return _node
-
-    def replace(self, node: Node, another: Node):
-        if node.parent:
-            if node == node.parent.left:
-                node.parent.left = another
+        for key, value in _iter:
+            if self.root is None:
+                self.root = TreeNode(key, value)
             else:
-                node.parent.right = another
-        if another is not None:
-            another.parent = node.parent
+                self.root.insert(key, value)
 
 
-if __name__ == "__main__":
+    def __repr__(self):
+        return str(self.root)
 
+    def traverse(self, callback=lambda v: print(v), _type='in-order'):
+        self.root.traverse(key_from=self.root.key, callback=callback, _type=_type)
+
+
+if __name__ == '__main__':
     from random import shuffle
+    keys = list(range(11))
+    values = list(range(2, 12))
+    shuffle(keys)
 
-    el = list(range(150))
-    shuffle(el)
-    bt = BinaryTree(el)
-    print(bt.search(10))
+    elements = dict(zip(keys, values))
+
+    bt = BinaryTree(elements)
+    print('in-order: '); bt.traverse()
+    print('pre-order: '); bt.traverse(_type='pre-order')
+    print('post-order: '); bt.traverse(_type='post-order')
