@@ -1,5 +1,8 @@
 import typing
 
+from stack import Stack
+from queue import Queue
+
 """ Tree
 
     - Definition
@@ -22,8 +25,203 @@ import typing
     width: the value of level which has maximum node count
 """
 
+class DFSMixin:
+    """add-on Mix-in class including DFS (Depth-First Search) methods
+    
+    the general DFS recursive patten for traversing a binary tree
 
-class TreeNode:
+    Go down on level to the recursive argument N.
+    If N exits (is non-empty) execute the following three operations in a certain order
+    (L) Recursively traverse N's left subtree.
+    (R) Recursively traverse N's right subtree.
+    (N) Process the current node N itself.
+
+    Return by going up one level and arriving at the parent node of N.
+    
+    """
+
+    def pre_order(self, visit=lambda _node: print(_node.value)):
+        """ N - L - R """
+        s = Stack()
+        s.push(self)
+        while not s.is_empty:
+            node = s.pop()
+            visit(node)
+
+            if node.right is not None:
+                s.push(node.right)
+
+            if node.left is not None:
+                s.push(node.left)
+        
+    def in_order(self, visit=lambda _node: print(_node.value)):
+        """ L - N - R """
+        s = Stack()
+        node = self
+        while (not s.is_empty or node is not None):
+            if node is not None:
+                s.push(node)
+                node = node.left
+            else:
+                node = s.pop()
+                visit(node)
+                node = node.right
+
+    def post_order(self, visit=lambda _node: print(_node.value)):
+        """ L - R - N """
+        s = Stack()
+        node = self
+        last_visited = None
+        while (not s.is_empty or node is not None):
+            if node is not None:
+                s.push(node)
+                node = node.left
+            else:
+                peek_node = s.peek()
+                if peek_node.right is not None and last_visited != peek_node.right:
+                    node = peek_node.right
+                else:
+                    visit(peek_node)
+                    last_visited = s.pop()
+
+
+class BFSMixin:
+    """add-on Mix-in class including BFS (Breath-First Search) methods
+    
+    Trees can also be traversed in level-order, where we visit every node on a level before going to a lower level. 
+    This search is referred to as breadth-first search (BFS), as the search tree is broadened as much as possible 
+    on each depth before going to the next depth.
+    """
+
+    def level_order(self, visit=lambda _node: print(_node.value)):
+        q = Queue()
+        q.enqueue(self)
+        while not q.is_empty:
+            node = q.dequeue()
+            visit(node)
+
+            if node.left is not None:
+                q.enqueue(node.left)
+
+            if node.right is not None:
+                q.enqueue(node.right)
+
+
+class AVLMixin:
+    BALANCE_FACTOR_RANGE = [-1, 0, 1]
+
+    @property
+    def balance_factor(self):
+        _right_subtree_height = self.right.height() if self.right else 0
+        _left_subtree_height = self.left.height() if self.left else 0
+        _balance_factor = _right_subtree_height - _left_subtree_height
+        return _balance_factor
+
+
+    @property
+    def is_unbalanced(self):
+        return self.balance_factor not in self.BALANCE_FACTOR_RANGE
+
+
+    def rotate_left(self, sub_root, node):
+        tmp = node.left
+        sub_root.right = tmp
+        if tmp is not None:
+            tmp.parent = sub_root
+        node.left = sub_root
+        sub_root.parent = node
+
+        return node
+
+
+    def rotate_right(self, sub_root, node):
+        tmp = node.right
+        sub_root.left = tmp
+        if tmp is not None:
+            tmp.parent = sub_root
+        node.right = sub_root
+        sub_root.parent = node
+
+        return node
+
+
+    def rotate_left_right(self, sub_root, node):
+        _node = node.right
+        _node = self.rotate_left(node, _node)
+        _node = self.rotate_right(sub_root, _node)
+
+        return _node
+
+
+    def rotate_right_left(self, sub_root, node):
+        _node = node.left
+        _node = self.rotate_right(node, _node)
+        _node = self.rotate_left(sub_root, _node)
+
+        return _node
+
+
+    def _insert(self, key, value):
+        _current = self
+        while True:
+            if key == self.key:
+                return
+            
+            if key < _current.key:
+                if _current.left is None:
+                    _current.left = TreeNode(key, value, parent=_current)
+                    return
+                _current = _current.left
+            else:
+                if _current.right is None:
+                    _current.right = TreeNode(key, value, parent=_current)
+                    return
+                _current = _current.right
+
+
+    def _insert_rebalancing(self):
+        pass
+
+
+    def _delete(self, key):
+        if key < self.key:
+            self.left.delete(key)
+            return
+
+        if key > self.key:
+            self.right.delete(key)
+            return
+
+        if self.left and self.right:
+            successor = self.right.min()
+            self.key = successor.key
+            successor.delete(successor.key)
+
+        elif self.left:
+            self.replace(self.left)
+
+        elif self.right:
+            self.replace(self.right)
+
+        else:
+            self.replace(None)
+
+
+    def _delete_rebalancing(self):
+        pass
+
+    
+    def insert(self, key, value):
+        self._insert(key, value)
+        self._insert_rebalancing()
+
+
+    def delete(self, key):
+        self._delete(key)
+        self._delete_rebalancing()
+
+
+class TreeNode(DFSMixin, BFSMixin, AVLMixin):
     def __init__(self, key, value, left = None, right = None, parent = None):
         self.key = key
         self.value = value
@@ -52,25 +250,7 @@ class TreeNode:
 
         if other:
             other.parent = self.parent
-
-
-    def insert(self, key, value):
-        _current = self
-        while True:
-            if key == self.key:
-                return
-            
-            if key < _current.key:
-                if _current.left is None:
-                    _current.left = TreeNode(key, value, parent=_current)
-                    return
-                _current = _current.left
-            else:
-                if _current.right is None:
-                    _current.right = TreeNode(key, value, parent=_current)
-                    return
-                _current = _current.right
-        
+    
 
     def search(self, key=None):
         _current = self
@@ -81,30 +261,6 @@ class TreeNode:
                 break
             _current = _current.left if key < _current.key else _current.right
         return _current
-
-
-    def delete(self, key):
-        if key < self.key:
-            self.left.delete(key)
-            return
-
-        if key > self.key:
-            self.right.delete(key)
-            return
-
-        if self.left and self.right:
-            successor = self.right.min()
-            self.key = successor.key
-            successor.delete(successor.key)
-
-        elif self.left:
-            self.replace(self.left)
-
-        elif self.right:
-            self.replace(self.right)
-
-        else:
-            self.replace(None)
 
 
     def is_parent(self, _node):
@@ -119,35 +275,14 @@ class TreeNode:
         return self.parent and self.parent.right == self
 
 
-    def traverse(self, key_from=0, callback=lambda v: print(v), _type='in-order'):
-        if _type not in ['in-order', 'pre-order', 'post-order']:
-            return
+    def height(self):
+        _height = 1
+        _right_subtree_height = self.right.height() if self.right else 0
+        _left_subtree_height = self.left.height() if self.left else 0
 
-        _node = self.search(key_from)
-        if _node is None:
-            return
-
-        if _type == 'in-order':
-            if _node.left:
-                self.traverse(_node.left.key, callback)
-            callback(_node.value)
-            if _node.right:
-                self.traverse(_node.right.key, callback)
-
-        elif _type == 'pre-order':
-            callback(_node.value)
-            if _node.left:
-                self.traverse(_node.left.key, callback)
-            if _node.right:
-                self.traverse(_node.right.key, callback)
-
-        else:
-            if _node.left:
-                self.traverse(_node.left.key, callback)
-            if _node.right:
-                self.traverse(_node.right.key, callback)                
-            callback(_node.value)
-
+        _extra = _right_subtree_height if _right_subtree_height > _left_subtree_height else _left_subtree_height
+        
+        return _height + _extra
 
 
 class BinaryTree:
@@ -169,10 +304,6 @@ class BinaryTree:
     def __repr__(self):
         return str(self.root)
 
-    def traverse(self, callback=lambda v: print(v), _type='in-order'):
-        self.root.traverse(key_from=self.root.key, callback=callback, _type=_type)
-
-
 if __name__ == '__main__':
     from random import shuffle
     keys = list(range(11))
@@ -182,6 +313,8 @@ if __name__ == '__main__':
     elements = dict(zip(keys, values))
 
     bt = BinaryTree(elements)
-    print('in-order: '); bt.traverse()
-    print('pre-order: '); bt.traverse(_type='pre-order')
-    print('post-order: '); bt.traverse(_type='post-order')
+    print(bt, bt.root.height())
+    print('in-order: '); bt.root.in_order()
+    print('pre-order: '); bt.root.pre_order()
+    print('post-order: '); bt.root.post_order()
+    print('level-order: '); bt.root.level_order()
