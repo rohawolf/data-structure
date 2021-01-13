@@ -167,58 +167,141 @@ class AVLMixin:
             if key == self.key:
                 return
             
-            if key < _current.key:
-                if _current.left is None:
-                    _current.left = TreeNode(key, value, parent=_current)
-                    return
-                _current = _current.left
+            _target = 'left' if key < _current.key else 'right'
+            _temp = getattr(_current, _target)
+            if _temp is None:
+                _inserted = TreeNode(key, value, parent=_current)
+                setattr(_current, _target, _inserted)
+                return _inserted
+
+            _current = _temp
+
+
+    def _insert_rebalancing(self, inserted):
+        _current = inserted
+        while _current.parent:
+            _parent = _current.parent
+
+            if _current == _parent.right:
+                if _parent.balance_factor > 1:
+                    G = _parent.parent
+                    if _current.balance_factor < 0:
+                        N = self.rotate_right_left(_parent, _current)
+                    else:
+                        N = self.rotate_left(_parent, _current)
+                else:
+                    if _parent.balance_factor == 0:
+                        break
+                    _current = _parent
+                    continue
+
             else:
-                if _current.right is None:
-                    _current.right = TreeNode(key, value, parent=_current)
-                    return
-                _current = _current.right
+                if _parent.balance_factor < -1:
+                    G = _parent.parent
+                    if _current.balance_factor > 0:
+                        N = self.rotate_left_right(_parent, _current)
+                    else:
+                        N = self.rotate_right(_parent, _current)
+                else:
+                    if _parent.balance_factor == 0:
+                        break
+                    _current = _parent
+                    continue
 
-
-    def _insert_rebalancing(self):
-        pass
-
+            N.parent = G
+            if G is not None:
+                if _parent == G.left:
+                    G.left = N
+                else:
+                    G.right = N
+            else:
+                self.replace(N) 
+            break
+        
 
     def _delete(self, key):
         if key < self.key:
             self.left.delete(key)
-            return
+            return 
 
         if key > self.key:
             self.right.delete(key)
-            return
+            return 
 
         if self.left and self.right:
             successor = self.right.min()
             self.key = successor.key
             successor.delete(successor.key)
 
-        elif self.left:
-            self.replace(self.left)
-
-        elif self.right:
-            self.replace(self.right)
-
         else:
-            self.replace(None)
+            _parent = self.parent
+            if self.left:
+                self.replace(self.left)
+
+            elif self.right:
+                self.replace(self.right)
+
+            else:
+                self.replace(None)
+
+            return _parent
 
 
-    def _delete_rebalancing(self):
-        pass
+    def _delete_rebalancing(self, child_deleted):
+        _current = child_deleted
+        while _current and _current.parent:
+            _parent = _current.parent
+            G = _parent.parent
 
-    
+            if _current == _parent.left:
+                if _parent.balance_factor > 1:
+                    Z = _parent.right
+                    B = Z.balance_factor
+                    if B < 0:
+                        _current = self.rotate_right_left(_parent, Z)
+                    else:
+                        _current = self.rotate_left(_parent, Z)
+                else:
+                    if _parent.balance_factor == 0:
+                        break
+                    _current = _parent
+                    continue
+
+            else:
+                if _parent.balance_factor < -1:
+                    Z = _parent.left
+                    B = Z.balance_factor
+                    if B > 0:
+                        _current = self.rotate_left_right(_parent, Z)
+                    else:
+                        _current = self.rotate_right(_parent, Z)
+                else:
+                    if _parent.balance_factor == 0:
+                        break
+                    _current = _parent
+                    continue
+            
+            _current.parent = G
+            if G is not None:
+                if _parent == G.left:
+                    G.left = _current
+                else:
+                    G.right = _current
+            else:
+                self.replace(_current)
+            
+            if B == 0:
+                break
+
+
     def insert(self, key, value):
-        self._insert(key, value)
-        self._insert_rebalancing()
+        inserted = self._insert(key, value)
+        self._insert_rebalancing(inserted)
 
 
     def delete(self, key):
-        self._delete(key)
-        self._delete_rebalancing()
+        child_deleted = self._delete(key)
+        self._delete_rebalancing(child_deleted)
 
 
 class TreeNode(DFSMixin, BFSMixin, AVLMixin):
@@ -240,7 +323,7 @@ class TreeNode(DFSMixin, BFSMixin, AVLMixin):
             _current = _current.left
         return _current
 
-    
+
     def replace(self, other):
         if self.parent:
             if self == self.parent.left:
@@ -267,11 +350,11 @@ class TreeNode(DFSMixin, BFSMixin, AVLMixin):
         return _node is not None and _node.parent == self
 
 
-    def is_left(self, _parent):
+    def is_left(self):
         return self.parent and self.parent.left == self
 
 
-    def is_right(self, _parent):
+    def is_right(self):
         return self.parent and self.parent.right == self
 
 
@@ -315,6 +398,4 @@ if __name__ == '__main__':
     bt = BinaryTree(elements)
     print(bt, bt.root.height())
     print('in-order: '); bt.root.in_order()
-    print('pre-order: '); bt.root.pre_order()
-    print('post-order: '); bt.root.post_order()
-    print('level-order: '); bt.root.level_order()
+    
