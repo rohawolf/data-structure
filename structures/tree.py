@@ -107,8 +107,120 @@ class BFSMixin:
                 q.enqueue(node.right)
 
 
-class AVLMixin:
-    BALANCE_FACTOR_RANGE = [-1, 0, 1]
+class TreeNode(DFSMixin, BFSMixin):
+    def __init__(self, key, value, left = None, right = None, parent = None):
+        self.key = key
+        self.value = value
+        self.left = left
+        self.right = right
+        self.parent = parent
+
+
+    def __repr__(self):
+        return f'< {self.left or "*"} <-- {self.key}:{self.value} --> {self.right or "*"} >'
+
+
+    def height(self):
+        _height = 1
+        _right_subtree_height = self.right.height() if self.right else 0
+        _left_subtree_height = self.left.height() if self.left else 0
+
+        _extra = _right_subtree_height if _right_subtree_height > _left_subtree_height else _left_subtree_height
+        
+        return _height + _extra
+
+
+class BinaryTree:
+    def __init__(self, values=None):
+        self.root = None
+
+        if values is not None:
+            if any([isinstance(values, _type) for _type in [list, set, frozenset]]):
+                _iter = enumerate(values)
+            elif isinstance(values, dict):
+                _iter = values.items()
+
+            for key, value in _iter:
+                self.insert(key, value)
+
+
+    def __repr__(self):
+        return str(self.root)
+
+
+    def replace(self, node, other):
+        if node.parent:
+            if node == node.parent.left:
+                node.parent.left = other
+            else:
+                node.parent.right = other
+
+        if other:
+            other.parent = node.parent
+    
+
+    def search(self, key):
+        _current = self.root
+        while _current is not None:
+            if key == _current.key:
+                break
+            _current = _current.left if key < _current.key else _current.right
+        return _current
+    
+
+    def _insert(self, key, value):
+        if self.root is None:
+            self.root = TreeNode(key, value)
+            return 
+
+        _current = self.root
+        while _current is not None:
+            if key == _current.key:
+                return
+            
+            _target = 'left' if key < _current.key else 'right'
+            _temp = getattr(_current, _target)
+            if _temp is None:
+                _inserted = TreeNode(key, value, parent=_current)
+                setattr(_current, _target, _inserted)
+                return _inserted
+
+            _current = _temp
+
+
+    def insert(self, key, value):
+        return self._insert(key, value)
+
+
+    def _delete(self, key):
+        to_be_deleted = self.search(key)
+        _parent = None
+
+        if to_be_deleted.left is not None and to_be_deleted.right is not None:
+            parent, child = to_be_deleted, to_be_deleted.right
+            while child.left is not None:
+                parent, child = child, child.left
+            self.replace(child.left, to_be_deleted.left)
+            if parent != to_be_deleted:
+                parent.left, child.right = child.right, node.right
+            self.replace(node, child)
+
+        elif to_be_deleted.left or to_be_deleted.right:
+            self.replace(to_be_deleted, to_be_deleted.left or to_be_deleted.right)
+        
+        else:
+            self.replace(to_be_deleted, None)
+
+        return _parent
+
+
+    def delete(self, key):
+        self._delete(key)
+
+
+
+class AVLBinaryTree(BinaryTree, AVLMixin):
+        BALANCE_FACTOR_RANGE = [-1, 0, 1]
 
     @property
     def balance_factor(self):
@@ -161,22 +273,6 @@ class AVLMixin:
         return _node
 
 
-    def _insert(self, key, value):
-        _current = self
-        while True:
-            if key == self.key:
-                return
-            
-            _target = 'left' if key < _current.key else 'right'
-            _temp = getattr(_current, _target)
-            if _temp is None:
-                _inserted = TreeNode(key, value, parent=_current)
-                setattr(_current, _target, _inserted)
-                return _inserted
-
-            _current = _temp
-
-
     def _insert_rebalancing(self, inserted):
         _current = inserted
         while _current.parent:
@@ -217,34 +313,6 @@ class AVLMixin:
             else:
                 self.replace(N) 
             break
-        
-
-    def _delete(self, key):
-        if key < self.key:
-            self.left.delete(key)
-            return 
-
-        if key > self.key:
-            self.right.delete(key)
-            return 
-
-        if self.left and self.right:
-            successor = self.right.min()
-            self.key = successor.key
-            successor.delete(successor.key)
-
-        else:
-            _parent = self.parent
-            if self.left:
-                self.replace(self.left)
-
-            elif self.right:
-                self.replace(self.right)
-
-            else:
-                self.replace(None)
-
-            return _parent
 
 
     def _delete_rebalancing(self, child_deleted):
@@ -304,88 +372,7 @@ class AVLMixin:
         self._delete_rebalancing(child_deleted)
 
 
-class TreeNode(DFSMixin, BFSMixin, AVLMixin):
-    def __init__(self, key, value, left = None, right = None, parent = None):
-        self.key = key
-        self.value = value
-        self.left = left
-        self.right = right
-        self.parent = parent
 
-
-    def __repr__(self):
-        return f'< {self.left or "*"} <-- {self.key}:{self.value} --> {self.right or "*"} >'
-
-
-    def min(self):
-        _current = self
-        while _current.left:
-            _current = _current.left
-        return _current
-
-
-    def replace(self, other):
-        if self.parent:
-            if self == self.parent.left:
-                self.parent.left = other
-            else:
-                self.parent.right = other
-
-        if other:
-            other.parent = self.parent
-    
-
-    def search(self, key=None):
-        _current = self
-        while _current is not None:
-            if key is None:
-                return None
-            if key == _current.key:
-                break
-            _current = _current.left if key < _current.key else _current.right
-        return _current
-
-
-    def is_parent(self, _node):
-        return _node is not None and _node.parent == self
-
-
-    def is_left(self):
-        return self.parent and self.parent.left == self
-
-
-    def is_right(self):
-        return self.parent and self.parent.right == self
-
-
-    def height(self):
-        _height = 1
-        _right_subtree_height = self.right.height() if self.right else 0
-        _left_subtree_height = self.left.height() if self.left else 0
-
-        _extra = _right_subtree_height if _right_subtree_height > _left_subtree_height else _left_subtree_height
-        
-        return _height + _extra
-
-
-class BinaryTree:
-    def __init__(self, values):
-        self.root = None
-
-        if any([isinstance(values, _type) for _type in [list, set, frozenset]]):
-            _iter = enumerate(values)
-        elif isinstance(values, dict):
-            _iter = values.items()
-
-        for key, value in _iter:
-            if self.root is None:
-                self.root = TreeNode(key, value)
-            else:
-                self.root.insert(key, value)
-
-
-    def __repr__(self):
-        return str(self.root)
 
 if __name__ == '__main__':
     from random import shuffle
@@ -395,7 +382,10 @@ if __name__ == '__main__':
 
     elements = dict(zip(keys, values))
 
-    bt = BinaryTree(elements)
+    bt = AVLBinaryTree()
+    for key, value in elements.items():
+        bt.insert(key, value)
+
     print(bt, bt.root.height())
     print('in-order: '); bt.root.in_order()
     
