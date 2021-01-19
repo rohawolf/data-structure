@@ -1,88 +1,66 @@
-import typing
-
-from stack import Stack
 from queue import Queue
 
-""" Tree
 
-    - Definition
+class NodeAlreadyExist(Exception):
+    pass
 
-    node: the basic element consisting of tree
-    edge: the connection such like branch of tree
-    parent node: the node which has child node
-    child node: the node which has parent node
-    root (node): the starting node, which has no parent node
-    siblings node: the node from same parent node
-    leaf (node)/(terminal node): the node which has no child node
-    path: the sequence of nodes from one to another
-    length: the count of nodes from start node to end node
-    depth: the path length from root
-    level: the edge count from root
-    height: the max value of depth
-    degree: the count of child node
-    degree of tree: the max value of degree of node in tree
-    size: total count of node including root
-    width: the value of level which has maximum node count
-"""
 
 class DFSMixin:
     """add-on Mix-in class including DFS (Depth-First Search) methods
     
     the general DFS recursive patten for traversing a binary tree
-
     Go down on level to the recursive argument N.
     If N exits (is non-empty) execute the following three operations in a certain order
     (L) Recursively traverse N's left subtree.
     (R) Recursively traverse N's right subtree.
     (N) Process the current node N itself.
-
     Return by going up one level and arriving at the parent node of N.
     
     """
 
     def pre_order(self, visit=lambda _node: print(_node.value)):
         """ N - L - R """
-        s = Stack()
-        s.push(self)
-        while not s.is_empty:
-            node = s.pop()
-            visit(node)
 
-            if node.right is not None:
-                s.push(node.right)
+        def _pre_order(node, visit):
+            if node is None:
+                pass
 
-            if node.left is not None:
-                s.push(node.left)
+            else:
+                visit(node)
+                _pre_order(node.left, visit)
+                _pre_order(node.right, visit)
         
+        _pre_order(self.root, visit)
+        
+
     def in_order(self, visit=lambda _node: print(_node.value)):
         """ L - N - R """
-        s = Stack()
-        node = self
-        while (not s.is_empty or node is not None):
-            if node is not None:
-                s.push(node)
-                node = node.left
+
+        def _in_order(node, visit):
+            if node is None:
+                pass
+
             else:
-                node = s.pop()
+                _in_order(node.left, visit)
                 visit(node)
-                node = node.right
+                _in_order(node.right, visit)
+        
+        _in_order(self.root, visit)
+
 
     def post_order(self, visit=lambda _node: print(_node.value)):
         """ L - R - N """
-        s = Stack()
-        node = self
-        last_visited = None
-        while (not s.is_empty or node is not None):
-            if node is not None:
-                s.push(node)
-                node = node.left
+
+        def _post_order(node, visit):
+            if node is None:
+                pass
+
             else:
-                peek_node = s.peek()
-                if peek_node.right is not None and last_visited != peek_node.right:
-                    node = peek_node.right
-                else:
-                    visit(peek_node)
-                    last_visited = s.pop()
+                _post_order(node.left, visit)
+                _post_order(node.right, visit)
+                visit(node)
+
+        _post_order(self.root, visit)
 
 
 class BFSMixin:
@@ -94,298 +72,251 @@ class BFSMixin:
     """
 
     def level_order(self, visit=lambda _node: print(_node.value)):
-        q = Queue()
-        q.enqueue(self)
-        while not q.is_empty:
-            node = q.dequeue()
-            visit(node)
 
-            if node.left is not None:
-                q.enqueue(node.left)
+        def _level_order(node, visit):
+            q = Queue()
+            q.enqueue(node)
+            while not q.is_empty:
+                node = q.dequeue()
+                if node is not None:
+                    visit(node)
+                    if node.left is not None:
+                        q.enqueue(node.left)
 
-            if node.right is not None:
-                q.enqueue(node.right)
+                    if node.right is not None:
+                        q.enqueue(node.right)
+        
+        _level_order(self.root, visit)
 
 
-class TreeNode(DFSMixin, BFSMixin):
-    def __init__(self, key, value, left = None, right = None, parent = None):
+class Node(object):
+    def __init__(self, key, value, left=None, right=None, parent=None):
         self.key = key
         self.value = value
         self.left = left
         self.right = right
         self.parent = parent
-
+        self.balance_factor = 0
 
     def __repr__(self):
-        return f'< {self.left or "*"} <-- {self.key}:{self.value} --> {self.right or "*"} >'
+        return f'<{self.left or "*"} <-{self.key}-> {self.right or "*"}>'
 
 
-    def height(self):
-        _height = 1
-        _right_subtree_height = self.right.height() if self.right else 0
-        _left_subtree_height = self.left.height() if self.left else 0
-
-        _extra = _right_subtree_height if _right_subtree_height > _left_subtree_height else _left_subtree_height
-        
-        return _height + _extra
-
-
-class BinaryTree:
-    def __init__(self, values=None):
+class BinarySearchTree(DFSMixin, BFSMixin):
+    def __init__(self):
         self.root = None
 
-        if values is not None:
-            if any([isinstance(values, _type) for _type in [list, set, frozenset]]):
-                _iter = enumerate(values)
-            elif isinstance(values, dict):
-                _iter = values.items()
 
-            for key, value in _iter:
-                self.insert(key, value)
+    def find_min(self, node):
+        current = node
+        while current.left is not None:
+            current = current.left
+        return current
 
 
-    def __repr__(self):
-        return str(self.root)
-
-
-    def replace(self, node, other):
-        if node.parent:
+    def swap(self, node, another):
+        if node.parent is not None:
             if node == node.parent.left:
-                node.parent.left = other
+                node.parent.left = another
             else:
-                node.parent.right = other
+                node.parent.right = another
+        
+        if another:
+            another.parent = node.parent
 
-        if other:
-            other.parent = node.parent
+
+    def _find_value(self, key):
+        current = self.root
+        while current is not None:
+            if key == current.key:
+                return current
+
+            current = current.left if key < current.key else current.right
+        return None
+
+
+    def _insert_value(self, node, key, value, parent=None):
+        inserted = False
+
+        if node is None:
+            node = Node(key, value, parent=parent)
+            inserted = True
+
+        else:
+            if key == node.key:
+                return None, inserted
+
+            elif key < node.key:
+                node.left, inserted = self._insert_value(node.left, key, value, node)
+            else:
+                node.right, inserted = self._insert_value(node.right, key, value, node)
+
+        return node, inserted
+        
+        
+    def _delete_value(self, node, key):
+        if node is None:
+            return node, False
+
+        deleted = False
+        if key == node.key:
+            deleted = True
+            if node.left and node.right:
+                # replace the node to the leftmost of node.right
+                parent, child = node, node.right
+                while child.left is not None:
+                    parent, child = child, child.left
+                child.left = node.left
+                if parent != node:
+                    parent.left = child.right
+                    child.right = node.right
+                node = child
+            elif node.left or node.right:
+                node = node.left or node.right
+            else:
+                node = None
+        elif key < node.key:
+            node.left, deleted = self._delete_value(node.left, key)
+        else:
+            node.right, deleted = self._delete_value(node.right, key)
+        return node, deleted
     
 
-    def search(self, key):
-        _current = self.root
-        while _current is not None:
-            if key == _current.key:
-                break
-            _current = _current.left if key < _current.key else _current.right
-        return _current
-    
-
-    def _insert(self, key, value):
-        if self.root is None:
-            self.root = TreeNode(key, value)
-            return 
-
-        _current = self.root
-        while _current is not None:
-            if key == _current.key:
-                return
-            
-            _target = 'left' if key < _current.key else 'right'
-            _temp = getattr(_current, _target)
-            if _temp is None:
-                _inserted = TreeNode(key, value, parent=_current)
-                setattr(_current, _target, _inserted)
-                return _inserted
-
-            _current = _temp
+    def find(self, key):
+        return self._find_value(key)
 
 
     def insert(self, key, value):
-        return self._insert(key, value)
-
-
-    def _delete(self, key):
-        to_be_deleted = self.search(key)
-        _parent = None
-
-        if to_be_deleted.left is not None and to_be_deleted.right is not None:
-            parent, child = to_be_deleted, to_be_deleted.right
-            while child.left is not None:
-                parent, child = child, child.left
-            self.replace(child.left, to_be_deleted.left)
-            if parent != to_be_deleted:
-                parent.left, child.right = child.right, node.right
-            self.replace(node, child)
-
-        elif to_be_deleted.left or to_be_deleted.right:
-            self.replace(to_be_deleted, to_be_deleted.left or to_be_deleted.right)
-        
-        else:
-            self.replace(to_be_deleted, None)
-
-        return _parent
+        self.root, inserted = self._insert_value(self.root, key, value)
+        return inserted
 
 
     def delete(self, key):
-        self._delete(key)
+        self.root, deleted = self._delete_value(self.root, key)
+        return deleted
 
 
+class AVLBinarySearchTree(BinarySearchTree):
+    def rotate_left(self, subroot, node):
+        self.swap(subroot.right, node.left)
+        self.swap(node.left, subroot)
 
-class AVLBinaryTree(BinaryTree, AVLMixin):
-        BALANCE_FACTOR_RANGE = [-1, 0, 1]
-
-    @property
-    def balance_factor(self):
-        _right_subtree_height = self.right.height() if self.right else 0
-        _left_subtree_height = self.left.height() if self.left else 0
-        _balance_factor = _right_subtree_height - _left_subtree_height
-        return _balance_factor
-
-
-    @property
-    def is_unbalanced(self):
-        return self.balance_factor not in self.BALANCE_FACTOR_RANGE
-
-
-    def rotate_left(self, sub_root, node):
-        tmp = node.left
-        sub_root.right = tmp
-        if tmp is not None:
-            tmp.parent = sub_root
-        node.left = sub_root
-        sub_root.parent = node
+        if node.balance_factor == 0:
+            subroot.balance_factor += 1
+            node.balance_factor -= 1
+        else:
+            subroot.balance_factor = 0
+            node.balance_factor = 0
 
         return node
 
 
-    def rotate_right(self, sub_root, node):
-        tmp = node.right
-        sub_root.left = tmp
-        if tmp is not None:
-            tmp.parent = sub_root
-        node.right = sub_root
-        sub_root.parent = node
+    def rotate_right(self, subroot, node):
+        self.swap(subroot.left, node.right)
+        self.swap(node.right, subroot)
+
+        if node.balance_factor == 0:
+            subroot.balance_factor -= 1
+            node.balance_factor += 1
+        else:
+            subroot.balance_factor = 0
+            node.balance_factor = 0
 
         return node
 
 
-    def rotate_left_right(self, sub_root, node):
-        _node = node.right
-        _node = self.rotate_left(node, _node)
-        _node = self.rotate_right(sub_root, _node)
+    def rotate_right_left(self, subroot, node):
+        self.swap(node.left.left, node.right)
+        self.swap(node.right, node.left)
 
-        return _node
+        self.swap(subroot.right, node.left.left)
+        self.swap(node.left.left, subroot)
+
+        if node.left.balance_factor == 0:
+            subroot.balance_factor = 0
+            node.balance_factor = 0
+        elif node.left.balance_factor > 0:
+            subroot.balance_factor -= 1
+            node.balance_factor = 0
+        else:
+            subroot.balance_factor = 0
+            node.balance_factor += 1
+
+        node.left.balance_factor = 0
+        return node.left
 
 
-    def rotate_right_left(self, sub_root, node):
-        _node = node.left
-        _node = self.rotate_right(node, _node)
-        _node = self.rotate_left(sub_root, _node)
+    def rotate_left_right(self, subroot, node):
+        self.swap(node.right.right, node.left)
+        self.swap(node.left, node.right)
 
-        return _node
+        self.swap(subroot.left, node.right.right)
+        self.swap(node.right.right, subroot)
+
+        if node.right.balance_factor == 0:
+            subroot.balance_factor = 0
+            node.balance_factor = 0
+        elif node.right.balance_factor > 0:
+            subroot.balance_factor += 1
+            node.balance_factor = 0
+        else:
+            subroot.balance_factor = 0
+            node.balance_factor -= 1
+
+        node.right.balance_factor = 0
+        return node.right
 
 
-    def _insert_rebalancing(self, inserted):
-        _current = inserted
-        while _current.parent:
-            _parent = _current.parent
-
-            if _current == _parent.right:
-                if _parent.balance_factor > 1:
-                    G = _parent.parent
-                    if _current.balance_factor < 0:
-                        N = self.rotate_right_left(_parent, _current)
-                    else:
-                        N = self.rotate_left(_parent, _current)
-                else:
-                    if _parent.balance_factor == 0:
-                        break
-                    _current = _parent
-                    continue
-
-            else:
-                if _parent.balance_factor < -1:
-                    G = _parent.parent
-                    if _current.balance_factor > 0:
-                        N = self.rotate_left_right(_parent, _current)
-                    else:
-                        N = self.rotate_right(_parent, _current)
-                else:
-                    if _parent.balance_factor == 0:
-                        break
-                    _current = _parent
-                    continue
-
-            N.parent = G
-            if G is not None:
-                if _parent == G.left:
-                    G.left = N
-                else:
-                    G.right = N
-            else:
-                self.replace(N) 
-            break
-
+    def _insert_rebalancing(self, child_inserted):
+        pass
 
     def _delete_rebalancing(self, child_deleted):
-        _current = child_deleted
-        while _current and _current.parent:
-            _parent = _current.parent
-            G = _parent.parent
-
-            if _current == _parent.left:
-                if _parent.balance_factor > 1:
-                    Z = _parent.right
-                    B = Z.balance_factor
-                    if B < 0:
-                        _current = self.rotate_right_left(_parent, Z)
-                    else:
-                        _current = self.rotate_left(_parent, Z)
-                else:
-                    if _parent.balance_factor == 0:
-                        break
-                    _current = _parent
-                    continue
-
-            else:
-                if _parent.balance_factor < -1:
-                    Z = _parent.left
-                    B = Z.balance_factor
-                    if B > 0:
-                        _current = self.rotate_left_right(_parent, Z)
-                    else:
-                        _current = self.rotate_right(_parent, Z)
-                else:
-                    if _parent.balance_factor == 0:
-                        break
-                    _current = _parent
-                    continue
-            
-            _current.parent = G
-            if G is not None:
-                if _parent == G.left:
-                    G.left = _current
-                else:
-                    G.right = _current
-            else:
-                self.replace(_current)
-            
-            if B == 0:
-                break
-
-
-    def insert(self, key, value):
-        inserted = self._insert(key, value)
-        self._insert_rebalancing(inserted)
-
-
-    def delete(self, key):
-        child_deleted = self._delete(key)
-        self._delete_rebalancing(child_deleted)
-
-
+        pass
 
 
 if __name__ == '__main__':
-    from random import shuffle
-    keys = list(range(11))
-    values = list(range(2, 12))
-    shuffle(keys)
+    array = [40, 4, 34, 45, 14, 55, 48, 13, 15, 49, 47]
 
-    elements = dict(zip(keys, values))
+    bst = BinarySearchTree()
+    for x in array:
+        bst.insert(x, x)
 
-    bt = AVLBinaryTree()
-    for key, value in elements.items():
-        bt.insert(key, value)
+    print(bst.root)
+    print(bst.find(15)) # True
+    print(bst.find(17)) # False
 
-    print(bt, bt.root.height())
-    print('in-order: '); bt.root.in_order()
+    # # depth first
+    # bst.pre_order()   # 40 4 34 14 13 15 45 55 48 47 49
+    # bst.in_order()    # 4 13 14 15 34 40 45 47 48 49 55
+    # bst.post_order()  # 13 15 14 34 4 47 49 48 55 45 40
+    # # breadth first
+    # bst.level_order() # 40 4 45 34 55 14 48 13 15 47 49
+
+    # print(bst.delete(55)) # True
     
+
+    # # depth first
+    # bst.pre_order()   # 40 4 34 14 13 15 45 48 47 49
+    # bst.in_order()    # 4 13 14 15 34 40 45 47 48 49
+    # bst.post_order()  # 13 15 14 34 4 47 49 48 45 40
+    # # breadth first
+    # bst.level_order() # 40 4 45 34 48 14 47 49 13 15
+
+    # print(bst.delete(14)) # True
+    # print(bst.root)
+
+    # # depth first
+    # bst.pre_order()   # 40 4 34 15 13 45 48 47 49
+    # bst.in_order()    # 4 13 15 34 40 45 47 48 49
+    # bst.post_order()  # 13 15 34 4 47 49 48 45 40
+    # # breadth first
+    # bst.level_order() # 40 4 45 34 48 15 47 49 13
+
+    # print(bst.delete(11)) # False
+
+    # # depth first
+    # bst.pre_order()   # 40 4 34 15 13 45 48 47 49
+    # bst.in_order()    # 4 13 15 34 40 45 47 48 49
+    # bst.post_order()  # 13 15 34 4 47 49 48 45 40
+    # # breadth first
+    # bst.level_order() # 40 4 45 34 48 15 47 49 13
