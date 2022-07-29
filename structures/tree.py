@@ -7,7 +7,7 @@ class NodeAlreadyExist(Exception):
 
 class DFSMixin:
     """add-on Mix-in class including DFS (Depth-First Search) methods
-    
+
     the general DFS recursive patten for traversing a binary tree
     Go down on level to the recursive argument N.
     If N exits (is non-empty) execute the following three operations in a certain order
@@ -15,13 +15,13 @@ class DFSMixin:
     (R) Recursively traverse N's right subtree.
     (N) Process the current node N itself.
     Return by going up one level and arriving at the parent node of N.
-    
+
     """
 
     def pre_order(self, visit=lambda _node: print(_node.value)):
-        """ N - L - R """
+        """N - L - R"""
 
-        def _in_order(tree, visit):
+        def _pre_order(tree, visit):
             if tree is None:
                 pass
 
@@ -29,12 +29,11 @@ class DFSMixin:
                 visit(tree.root)
                 _pre_order(tree.left, visit)
                 _pre_order(tree.right, visit)
-        
-        _pre_order(self, visit)
-        
+
+        _pre_order(self.tree, visit)
 
     def in_order(self, visit=lambda _node: print(_node.value)):
-        """ L - N - R """
+        """L - N - R"""
 
         def _in_order(tree, visit):
             if tree is None:
@@ -44,12 +43,11 @@ class DFSMixin:
                 _in_order(tree.left, visit)
                 visit(tree.root)
                 _in_order(tree.right, visit)
-        
-        _in_order(self, visit)
-        
+
+        _in_order(self.tree, visit)
 
     def post_order(self, visit=lambda _node: print(_node.value)):
-        """ L - R - N """
+        """L - R - N"""
 
         def _post_order(tree, visit):
             if tree is None:
@@ -59,20 +57,21 @@ class DFSMixin:
                 _post_order(tree.left, visit)
                 _post_order(tree.right, visit)
                 visit(tree.root)
-        
-        _post_order(self, visit)
+
+        _post_order(self.tree, visit)
 
 
 class BFSMixin:
     """add-on Mix-in class including BFS (Breath-First Search) methods
-    
-    Trees can also be traversed in level-order, where we visit every node on a level before going to a lower level. 
-    This search is referred to as breadth-first search (BFS), as the search tree is broadened as much as possible 
-    on each depth before going to the next depth.
+
+    Trees can also be traversed in level-order,
+    where we visit every node on a level before going to a lower level.
+    This search is referred to as breadth-first search (BFS),
+    as the search tree is broadened as much as possible on each depth
+    before going to the next depth.
     """
 
     def level_order(self, visit=lambda _node: print(_node.value)):
-
         def _level_order(tree, visit):
             q = Queue()
             q.enqueue(tree)
@@ -85,8 +84,8 @@ class BFSMixin:
 
                     if tree.right is not None:
                         q.enqueue(tree.right)
-        
-        _level_order(self, visit)
+
+        _level_order(self.tree, visit)
 
 
 class Node(object):
@@ -95,7 +94,7 @@ class Node(object):
         self.value = value
 
     def __repr__(self):
-        return f'{self.key}'
+        return f"{self.key}"
 
 
 class Tree(object):
@@ -107,29 +106,29 @@ class Tree(object):
         self.balance_factor = 0
 
     def __repr__(self):
-        left_subtree = self.left or ''
-        right_subtree = self.right or ''
-        root = '' if self.parent else 'root:'
-        return f'({left_subtree}<-{root}{self.root}->{right_subtree})'
+        root = "" if self.parent else "root:"
+        result = f"{root}{self.root}"
+        if self.left:
+            result = f"{self.left} <- {result}"
+
+        if self.right:
+            result = f"{result} -> {self.right}"
+
+        return f"({result})"
 
 
 class BinarySearchTree(DFSMixin, BFSMixin):
-    
-
     def __init__(self, node=None, left=None, right=None, parent=None):
         self.tree = Tree(node=None, left=None, right=None, parent=None)
 
-
     def __repr__(self):
         return str(self.tree)
-
 
     def find_min(self, tree):
         current = tree
         while current.left is not None:
             current = current.left
         return current
-
 
     def swap(self, tree, another):
         if tree is not None:
@@ -138,10 +137,9 @@ class BinarySearchTree(DFSMixin, BFSMixin):
                     tree.parent.left = another
                 else:
                     tree.parent.right = another
-            
+
             if another:
                 another.parent = tree.parent
-
 
     def _find_value(self, key):
         current = self.tree
@@ -152,7 +150,6 @@ class BinarySearchTree(DFSMixin, BFSMixin):
 
             current = current.left if key < node.key else current.right
         return None
-
 
     def _insert_value(self, tree, key, value, parent=None):
         node = Node(key, value)
@@ -177,13 +174,12 @@ class BinarySearchTree(DFSMixin, BFSMixin):
                 tree.right, inserted = self._insert_value(tree.right, key, value, tree)
 
         return tree, inserted
-        
-        
+
     def _delete_value(self, tree, key):
         deleted = False
         if tree is None:
             return tree, deleted
-        
+
         _parent = tree.parent
         node = tree.root
 
@@ -209,16 +205,13 @@ class BinarySearchTree(DFSMixin, BFSMixin):
         else:
             tree.right, deleted = self._delete_value(tree.right, key)
         return tree, deleted
-    
 
     def find(self, key):
         return self._find_value(key)
 
-
     def insert(self, key, value):
         self.tree, inserted = self._insert_value(self.tree, key, value)
         return inserted
-
 
     def delete(self, key):
         self.tree, deleted = self._delete_value(self.tree, key)
@@ -226,7 +219,6 @@ class BinarySearchTree(DFSMixin, BFSMixin):
 
 
 class AVLBinarySearchTree(BinarySearchTree):
-
     def rotate_left(self, sub_tree, heavy_tree, with_updating=True):
         sub_tree.right = heavy_tree.left
         if heavy_tree.left is not None:
@@ -243,7 +235,6 @@ class AVLBinarySearchTree(BinarySearchTree):
                 heavy_tree.balance_factor = 0
 
         return heavy_tree
-
 
     def rotate_right(self, sub_tree, heavy_tree, with_updating=True):
         sub_tree.left = heavy_tree.right
@@ -262,12 +253,11 @@ class AVLBinarySearchTree(BinarySearchTree):
 
         return heavy_tree
 
-
     def rotate_right_left(self, sub_tree, heavy_tree):
         new_tree = self.rotate_left(
-            sub_tree, 
-            self.rotate_right(heavy_tree, heavy_tree.left, with_updating=False), 
-            with_updating=False
+            sub_tree,
+            self.rotate_right(heavy_tree, heavy_tree.left, with_updating=False),
+            with_updating=False,
         )
 
         if new_tree.balance_factor == 0:
@@ -283,14 +273,13 @@ class AVLBinarySearchTree(BinarySearchTree):
         new_tree.balance_factor = 0
         return new_tree
 
-
     def rotate_left_right(self, sub_tree, heavy_tree):
         new_tree = self.rotate_right(
-            sub_tree, 
-            self.rotate_left(heavy_tree, heavy_tree.right, with_updating=False), 
-            with_updating=False
+            sub_tree,
+            self.rotate_left(heavy_tree, heavy_tree.right, with_updating=False),
+            with_updating=False,
         )
-        
+
         if new_tree.balance_factor == 0:
             sub_tree.balance_factor = 0
             heavy_tree.balance_factor = 0
@@ -304,11 +293,10 @@ class AVLBinarySearchTree(BinarySearchTree):
         new_tree.balance_factor = 0
         return new_tree
 
-    
     def _insert_rebalancing(self, inserted):
         _parent = inserted.parent
         _current = inserted
-        
+
         while _parent is not None:
             _grandparent = _parent.parent
             _new_tree = None
@@ -337,7 +325,7 @@ class AVLBinarySearchTree(BinarySearchTree):
                         break
                     _parent, _current = _grandparent, _parent
                     continue
-            
+
             _new_tree.parent = _grandparent
             if _grandparent is not None:
                 if _parent == _grandparent.left:
@@ -347,11 +335,9 @@ class AVLBinarySearchTree(BinarySearchTree):
             else:
                 self.tree = _new_tree
             break
-        
 
     def _delete_rebalancing(self, child_deleted):
         pass
-
 
     def insert(self, key, value):
         self.tree, is_inserted = self._insert_value(self.tree, key, value)
@@ -360,32 +346,32 @@ class AVLBinarySearchTree(BinarySearchTree):
             self._insert_rebalancing(inserted)
         return is_inserted
 
-
     def delete(self, key):
         self.tree, deleted = self._delete_value(self.tree, key)
         return deleted
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     array = [40, 4, 34, 45, 14, 55, 48, 13, 15, 49, 47]
 
     # bst = BinarySearchTree()
     bst = AVLBinarySearchTree()
     for x in array:
         bst.insert(x, x)
-        print(x, bst)
-    # print(bst)
-    bst.find(14) # True
-    bst.find(17) # False
+        # print(x, bst)
+    print(bst)
+    # bst.find(14) # True
+    # bst.find(17) # False
 
     # # depth first
-    # bst.pre_order()   # 40 4 34 14 13 15 45 55 48 47 49
-    # bst.in_order()    # 4 13 14 15 34 40 45 47 48 49 55
-    # bst.post_order()  # 13 15 14 34 4 47 49 48 55 45 40
+    bst.pre_order()  # 40 4 34 14 13 15 45 55 48 47 49
+    bst.in_order()  # 4 13 14 15 34 40 45 47 48 49 55
+    bst.post_order()  # 13 15 14 34 4 47 49 48 55 45 40
     # # breadth first
     # bst.level_order() # 40 4 45 34 55 14 48 13 15 47 49
 
-    print(bst.delete(55)) # True
-    print(bst)
+    # print(bst.delete(55)) # True
+    # print(bst)
 
     # # depth first
     # bst.pre_order()   # 40 4 34 14 13 15 45 48 47 49

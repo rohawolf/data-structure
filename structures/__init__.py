@@ -1,7 +1,8 @@
-from stack import Stack
 from queue import Queue
 
+from stack import Stack
+
 __all__ = [
-    'Stack',
-    'Queue',
+    "Stack",
+    "Queue",
 ]
